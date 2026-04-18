@@ -1,0 +1,28 @@
+__pycache__/
+*.pyc
+*.pth
+*.pt
+
+# Data (except defaults)
+data/stego/
+data/revealed/
+data/secret_store/
+data/train/
+data/val/
+
+# Images
+*.png
+*.jpg
+*.jpeg
+
+# Env
+venv/
+env/
+.env
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

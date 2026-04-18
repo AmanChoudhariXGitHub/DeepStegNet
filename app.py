@@ -10,6 +10,12 @@ from model import SteganoNetwork
 from metrics import calculate_psnr, calculate_ssim, calculate_payload_capacity, test_robustness
 import hashlib
 import time
+import sys
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Set page config
 st.set_page_config(
@@ -23,14 +29,36 @@ os.makedirs("data/stego", exist_ok=True)
 os.makedirs("data/revealed", exist_ok=True)
 os.makedirs("data/secret_store", exist_ok=True)  # New directory to store secret images
 
+# For production: use persistent disk on Render
+if os.environ.get('RENDER'):
+    DATA_DIR = "/var/data"
+    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(os.path.join(DATA_DIR, "stego"), exist_ok=True)
+    os.makedirs(os.path.join(DATA_DIR, "revealed"), exist_ok=True)
+    os.makedirs(os.path.join(DATA_DIR, "secret_store"), exist_ok=True)
+
 # Function to load model
 @st.cache_resource
 def load_model(model_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = SteganoNetwork().to(device)
-    model.load_state_dict(torch.load(model_path, map_location=device))
-    model.eval()
-    return model, device
+    logger.info(f"Loading model from {model_path}")
+    logger.info(f"Using device: {device}")
+    
+    if not os.path.exists(model_path):
+        st.error(f"❌ Model file not found at {model_path}")
+        st.info("Please ensure the model file has been downloaded or uploaded.")
+        st.stop()
+    
+    try:
+        model = SteganoNetwork().to(device)
+        model.load_state_dict(torch.load(model_path, map_location=device))
+        model.eval()
+        logger.info("Model loaded successfully!")
+        return model, device
+    except Exception as e:
+        logger.error(f"Error loading model: {e}")
+        st.error(f"❌ Error loading model: {e}")
+        st.stop()
 
 # Function to generate a unique ID for an image
 def generate_image_id(image):
@@ -105,18 +133,33 @@ def tensor_to_pil(tensor):
 
 # Function to convert PIL to bytes for download
 def pil_to_bytes(pil_img):
-    buf = io.BytesIO()
-    pil_img.save(buf, format='PNG')
-    return buf.getvalue()
-
-# Main app
-def main():
-    st.title("Deep Learning Image Steganography")
-    st.markdown("""
-    This application uses deep learning with Convolutional Neural Networks (CNNs) to perform image steganography.
-    You can either encode a secret image into a cover image or decode a stego image to reveal the hidden secret.
-    """)
     
+    # Check available models
+    available_models = []
+    model_dir = "saved_models"
+    if os.path.exists(model_dir):
+        available_models = [f"saved_models/{f}" for f in os.listdir(model_dir) if f.endswith('.pth')]
+    
+    if not available_models:
+        st.sidebar.error("❌ No model files found in saved_models/")
+        st.info("📥 **Setup Instructions:**\n"
+                "1. Ensure your model file is in the `saved_models/` directory\n"
+                "2. Supported format: `.pth` (PyTorch model files)\n"
+                "3. Recommended: `best_model.pth`")
+        st.stop()
+    
+    model_path = st.sidebar.selectbox(
+        "Select Model",
+        available_models,
+        index=0
+    )
+    
+    # Load model
+    try:
+        model, device = load_model(model_path)
+        st.sidebar.success("✅ Model loaded successfully!")
+    except Exception as e:
+        st.sidebar.error(f"❌ 
     # Sidebar for model selection
     st.sidebar.title("Model Settings")
     model_path = st.sidebar.selectbox(
