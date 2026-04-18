@@ -159,21 +159,7 @@ def pil_to_bytes(pil_img):
         model, device = load_model(model_path)
         st.sidebar.success("✅ Model loaded successfully!")
     except Exception as e:
-        st.sidebar.error(f"❌ 
-    # Sidebar for model selection
-    st.sidebar.title("Model Settings")
-    model_path = st.sidebar.selectbox(
-        "Select Model",
-        ["saved_models/best_model.pth"],
-        index=0
-    )
-    
-    # Load model
-    try:
-        model, device = load_model(model_path)
-        st.sidebar.success("Model loaded successfully!")
-    except Exception as e:
-        st.sidebar.error(f"Error loading model: {e}")
+        st.sidebar.error(f"❌ Error loading model: {e}")
         st.stop()
     
     # Mode selection
