@@ -25,17 +25,12 @@ st.set_page_config(
 )
 
 # Create directories if they don't exist
-os.makedirs("data/stego", exist_ok=True)
-os.makedirs("data/revealed", exist_ok=True)
-os.makedirs("data/secret_store", exist_ok=True)  # New directory to store secret images
-
-# For production: use persistent disk on Render
-if os.environ.get('RENDER'):
-    DATA_DIR = "/var/data"
-    os.makedirs(DATA_DIR, exist_ok=True)
-    os.makedirs(os.path.join(DATA_DIR, "stego"), exist_ok=True)
-    os.makedirs(os.path.join(DATA_DIR, "revealed"), exist_ok=True)
-    os.makedirs(os.path.join(DATA_DIR, "secret_store"), exist_ok=True)
+try:
+    os.makedirs("data/stego", exist_ok=True)
+    os.makedirs("data/revealed", exist_ok=True)
+    os.makedirs("data/secret_store", exist_ok=True)
+except (PermissionError, OSError) as e:
+    logger.warning(f"Could not create local data directories: {e}")
 
 # Function to load model
 @st.cache_resource
@@ -133,6 +128,20 @@ def tensor_to_pil(tensor):
 
 # Function to convert PIL to bytes for download
 def pil_to_bytes(pil_img):
+    buf = io.BytesIO()
+    pil_img.save(buf, format='PNG')
+    return buf.getvalue()
+
+# Main app
+def main():
+    st.title("Deep Learning Image Steganography")
+    st.markdown("""
+    This application uses deep learning with Convolutional Neural Networks (CNNs) to perform image steganography.
+    You can either encode a secret image into a cover image or decode a stego image to reveal the hidden secret.
+    """)
+    
+    # Sidebar for model selection
+    st.sidebar.title("Model Settings")
     
     # Check available models
     available_models = []
